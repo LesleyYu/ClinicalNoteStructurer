@@ -1,6 +1,21 @@
 /clinical_case_files
 /claude_instructions
 Project description.pdf
+.claude/
+other_mds/
 
 .DS_Store
 */.DS_Store
+
+*/package-lock.json
+
+# Backend
+backend/node_modules/
+backend/logs/
+backend/temp/
+backend/.env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
