@@ -2,8 +2,6 @@
 
 ---
 
-## Company Standards
-
 See @claude_instructions/project-structure.md for directory layout and naming conventions.
 See @claude_instructions/coding-guidelines.md for code style, naming, and engineering standards.
 See @claude_instructions/system-architecture.md for architecture patterns, subsystem design, and terminology.
@@ -86,16 +84,44 @@ See `clinical_case_files/` for MCG guidelines, and clinical case files (Cases A 
 
 > Claude Code updates this section at the end of every session.
 
-**Last updated:** YYYY-MM-DD
+**Last updated:** 2026-05-01
 
 ### Completed
-- (nothing yet)
+- **Phase 1 — Backend Core: complete and validated.**
+  - Backend dir layout: `backend/{src/{subsystems,modules/note_generation,endpoints},config,bin,logs,temp}`.
+  - `package.json` with deps installed: express, @anthropic-ai/sdk, @supabase/supabase-js, cors, helmet, dotenv. 106 packages, 0 vulnerabilities.
+  - `src/webserver_api.js` — middleware in required order (helmet → cors → json → urlencoded → dynamic loader → error handler). Auto-discovers `endpoint_*.js`. Logs to `logs/webserver_api_YYYYMMDD.log`.
+  - `src/modules/note_generation/note_generation.js` — system prompt embeds MCG DKA admission criteria + few-shot example. JSON parse with one retry on failure. Model: `claude-sonnet-4-6`. Logs to `logs/note_generation_YYYYMMDD.log`.
+  - `src/endpoints/endpoint_generate.js` — POST `/api/generate`.
+  - `src/endpoints/endpoint_system.js` — POST `/shutdown` (uses `process.exit(0)` after response flush; no `kill`, no PID files).
+  - `bin/webserver_start.sh` and `bin/webserver_stop.sh`.
+  - `.env` populated; `backend/.env` and `frontend/.env` covered by root `.gitignore`.
+- **Phase 1 live API validation:** Case A → disposition Admit, all 7 fields populated correctly, revised HPI cites pH 7.23, HCO3 9, glucose 793, sodium 129, ICU disposition, critical care 120 min. Case B → disposition Admit, revised HPI cites pH 7.20, HCO3 7.4, glucose 93, urine ketones 60, ICU disposition, critical care 35 min. Both runs flagged real source-document discrepancies in the `uncertainties` field (e.g., ED-vs-H&P pH mismatch in Case A; lethargic-vs-alert wording divergence in Case B). No invented clinical facts observed.
+
+- **Phase 2 — Database + Cases API: complete and validated.**
+  - `src/subsystems/case_management/case_management.js` — Supabase client (cached). Exports `insertCaseRecord`, `listAllCases`, `getCaseById`, `updateCaseRecord`. Always reads `result['error']` field directly (no destructuring of `{ data, error }`). Allowed-disposition validation. Update path uses an explicit allow-list of mutable fields and bumps `updated_at`. Logs to `logs/case_management_YYYYMMDD.log`.
+  - `src/endpoints/endpoint_cases.js` — `POST /api/cases`, `GET /api/cases`, `GET /api/cases/:id`, `PUT /api/cases/:id`. Validates inputs at top of each handler; returns the standard `{ result, message | data }` shape; never leaks raw Supabase error text.
+- **Phase 2 round-trip validation:** create → list → fetch → update → re-fetch all returned 200 with persisted edits and `updated_at` advanced past `created_at`. Empty-string fields (e.g., `uncertainties`, `chief_complaint`) and empty arrays preserved exactly on the wire after a small fix to the insert path (was coercing `""` to `null` via `||`).
+
+- **Phase 3 — Frontend: code complete; awaiting visual verification by engineer.**
+  - `frontend/` scaffolded via `npm create vite@latest frontend -- --template react`, then pinned to React 18.3.1 (CLAUDE.md spec) — Vite default would have given React 19. Final stack: React 18.3.1, react-dom 18.3.1, react-router-dom 6.30.3, Tailwind CSS v4.2.4 (`@import "tailwindcss"` only — no postcss config in v4), Vite 5.4.21.
+  - `vite.config.js` — Tailwind v4 Vite plugin registered; dev server pinned to port 5173 with `strictPort: true` (default host = `localhost` so the URL CORS-matches `FRONTEND_URL`).
+  - `src/api/generate.js`, `src/api/cases.js` — fetch wrappers; all components route API calls through these (no inline `fetch()` in components).
+  - `src/components/`: `NoteInputArea.jsx`, `StructuredOutputPanel.jsx`, `RevisedHpiEditor.jsx`, `EditBadge.jsx`, `DispositionBadge.jsx` (Admit=green, Observe=yellow, Discharge=red, Unknown=gray), `CaseListTable.jsx`.
+  - `src/pages/`: `HomePage.jsx`, `CasesPage.jsx`, `CaseDetailPage.jsx`. React Router routes `/`, `/cases`, `/cases/:id`.
+  - **Edit tracking:** field-level diff against the AI-baseline snapshot. On the HomePage, edits are dynamic (revert removes the badge). On the CaseDetailPage, prior `edited_fields` are sticky (we don't have the original AI baseline to diff against, only the saved value); new edits diff against the saved snapshot.
+- **Phase 3 build/integration verification (no browser yet):**
+  - `vite build` succeeded — 45 modules transformed, JS 179.91 kB / CSS 14.82 kB. No JSX or import errors.
+  - Vite dev server returns 200 on `/` with the right `<title>` and `/src/main.jsx` script tag; transformed `main.jsx` includes the `BrowserRouter` import.
+  - CORS preflight from `Origin: http://localhost:5173` → backend returns 204 with `Access-Control-Allow-Origin: http://localhost:5173`. A live `GET /api/cases` from the frontend origin returned 200 and the 2 cases from Phase 2.
 
 ### In Progress
-- (nothing yet)
+- **Phase 3 visual verification (engineer):** confirm the full flow in a browser at http://localhost:5173 — paste a note, generate, edit a field, verify the Edit badge appears, save, reopen the saved case from `/cases`, verify edited fields highlight correctly. Backend (pid in `logs/webserver_api_*.stdout.log`) and Vite dev server are currently running.
 
 ### Blocked / Pending Engineer Input
-- (nothing yet)
+- Two test records remain in the Supabase `cases` table from Phase 2 (and any new ones added during Phase 3 visual testing will accumulate). Engineer may want to delete them before any demo.
 
 ### Known Issues
-- (nothing yet)
+- **Case-file naming mismatch:** the file `clinical_case_files/Case A HPI Revised.pdf` describes the 47-year-old male euglycemic-DKA patient (matches `ER Notes Case B.pdf`), not the 34-year-old DKA patient in `ER Notes Case A.pdf`. The note_generation few-shot example uses this revised HPI as a model for the *output*, so the prompt itself is fine; only the file label is wrong.
+- **`npm run build` shells out to a `vite` not on PATH** in this Bash-tool environment (`sh: vite: command not found`). Direct invocation `node node_modules/vite/bin/vite.js build` works. Likely a sandboxed-PATH quirk specific to the tool's shell, not a real project issue — interactive `npm run build` from a normal terminal will work fine.
+- **`npm audit` reports 2 moderate dev-server vulnerabilities** in `esbuild` (transitive via Vite 5). The fix is `vite@8`, which is a breaking change. Not exposed in production builds (only affects local dev). Defer until a Vite major-version upgrade is otherwise warranted.

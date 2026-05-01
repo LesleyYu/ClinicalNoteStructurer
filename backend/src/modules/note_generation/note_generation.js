@@ -3,7 +3,7 @@ const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const ANTHROPIC_MODEL_ID = 'claude-sonnet-4-6';
-const ANTHROPIC_MAX_TOKENS = 2000;
+const ANTHROPIC_MAX_TOKENS = 1200;
 
 function buildLogPath()
 {
@@ -55,7 +55,9 @@ You MUST return a single JSON object with EXACTLY these keys, no preamble, no ma
   "revised_hpi": string
 }
 
-# REVISED HPI QUALITY REQUIREMENTS
+# OUTPUT QUALITY REQUIREMENTS
+
+## Content rules
 
 The revised_hpi field is a multi-sentence narrative that must:
 - Open with patient demographics (age, sex) and chief complaint.
@@ -65,6 +67,16 @@ The revised_hpi field is a multi-sentence narrative that must:
 - Describe ED treatment escalation (IV fluids, insulin drip, bicarbonate, antibiotics, etc.) actually documented in the source.
 - End with a sentence connecting the clinical picture to the need for inpatient/ICU-level admission per MCG criteria.
 - DO NOT invent any clinical facts not present in the source notes. If a value is not in the source, do not include it.
+
+## Length limits
+
+- revised_hpi: target 6–10 sentences, ≤ 350 words. Be concise; do not pad with redundant clauses.
+- hpi_summary: 2–4 sentences, ≤ 80 words.
+- key_findings: 5–10 items, each ≤ 20 words. Group related labs into one bullet (e.g., "ABG: pH 7.20, HCO3 7.4, base excess −18.0") rather
+than splitting per value.
+- suspected_conditions: ≤ 5 items.
+- uncertainties: ≤ 2 sentences, or empty string.
+- Do not duplicate facts across key_findings and revised_hpi.
 
 # FEW-SHOT EXAMPLE
 
