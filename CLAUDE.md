@@ -1,15 +1,5 @@
 # Project Bootstrap
 
----
-
-See @claude_instructions/project-structure.md for directory layout and naming conventions.
-See @claude_instructions/coding-guidelines.md for code style, naming, and engineering standards.
-See @claude_instructions/system-architecture.md for architecture patterns, subsystem design, and terminology.
-See @claude_instructions/operational-directives.md for Claude Code behavioral expectations and efficiency rules.
-See @claude_instructions/Phases.md for how Claude Code should approach this project by following the iteration tasks.
-
----
-
 ## Project Context
 
 **Project Name:** ClinicalNoteStructurer

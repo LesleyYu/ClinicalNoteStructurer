@@ -7,7 +7,14 @@ Web app that converts unstructured clinical notes (ER, H&P) into a structured 7-
 - **Frontend (Link to deployed application):** https://clinical-note-structurer.vercel.app
 - **Backend API:** https://clinicalnotestructurer.onrender.com
 
+When you click the `Saved Cases` tab, you might experience **404 errors**. This is because free-tier "Render" (Where I deployed my Express API) doesn't provides stable connections for inactive requests. I pasted the tips shown on Render for reference:
 > Render's free tier spins down after ~15 min of inactivity. The first request after idle takes ~30–50s to wake; subsequent requests are fast.
+
+You can bypass this 404 error by: Wait for 50+ seconds, then go back to the **[home page](https://clinical-note-structurer.vercel.app)**. 
+
+Note that refreshing doesn't work. Please go back to the home page.
+
+This can be solved by upgrading Render memberships. Considering that this is a demo project, I will stick with free-tier for now.
 
 ## Features
 
