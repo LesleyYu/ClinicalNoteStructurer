@@ -22,7 +22,9 @@ function logServerEvent(event_tag, event_message)
     const mn_str = String(date_now.getMinutes()).padStart(2, '0');
     const ss_str = String(date_now.getSeconds()).padStart(2, '0');
     const log_line = `${hh_str}:${mn_str}:${ss_str} [${event_tag}] ${event_message}\n`;
-    fs.appendFileSync(buildLogPath(), log_line);
+    const log_path = buildLogPath();
+    fs.mkdirSync(path.dirname(log_path), { recursive: true });
+    fs.appendFileSync(log_path, log_line);
     process.stdout.write(log_line);
 }
 
